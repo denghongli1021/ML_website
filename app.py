@@ -23,7 +23,7 @@ from PIL import Image
 import numpy as np
 from mimetypes import guess_type 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['IMAGE_FOLDER'] = 'expression_images'  
