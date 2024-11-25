@@ -30,6 +30,10 @@ def index():
 def video():
     return send_from_directory('.', 'video.html')
 
+@app.route('/generate.html')
+def g():
+    return send_from_directory('.', 'generate.html')
+
 # static folder
 @app.route('/static/<path:filename>')
 def static_files(filename):
@@ -90,6 +94,26 @@ def predict_video():
     try:
         results = ["happy", "sad", "angry"] 
         return jsonify({'results': results})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/generate', methods=['POST'])
+def generate_expression():
+    try:
+        data = request.json  
+        if 'expression' not in data:
+            return jsonify({'error': 'No expression provided'}), 400
+
+        expression = data['expression']
+        folder_path = os.path.join(app.config['IMAGE_FOLDER'], expression)
+
+        if not os.path.exists(folder_path) or not os.listdir(folder_path):
+            return jsonify({'error': f'No images found for expression: {expression}'}), 404
+
+        random_image = random.choice(os.listdir(folder_path))
+        image_url = f"/get_image/{expression}/{random_image}"  # 返回圖片的 URL
+
+        return jsonify({'image_url': image_url, 'expression': expression})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
