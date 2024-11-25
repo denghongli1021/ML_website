@@ -34,7 +34,7 @@ def predict_expression(image_path):
     image_data = np.array(image) / 255.0
     expressions = ["happy", "angry", "sad", "neutral", "disgust", "fear", "surprise"]
     result = random.choice(expressions)  
-    result = "angry"
+    # result = "angry"
     return result
 
 # index.html
