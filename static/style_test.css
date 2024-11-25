@@ -109,21 +109,52 @@ nav a.active {
     display: block;
 }
 
-.result {
-    flex: 0.4; /* 結果區域占據較小寬度 */
-    max-width: 300px; /* 最大寬度 */
-    text-align: center; /* 左對齊文字 */
+.camera-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px; /* 影像和結果區域之間的間距 */
+    margin-top: 20px;
 }
 
-.result textarea {
+.video-feed {
+    width: 480px; /* 攝像頭畫面的寬度 */
+    height: 360px; /* 攝像頭畫面的高度 */
+    background-color: #000; /* 預設背景色 */
+    border: 2px solid #ddd; /* 邊框樣式 */
+    border-radius: 10px; /* 圓角 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+video {
+    width: 100%; /* 讓影片自適應 */
+    height: 100%;
+    border-radius: 10px; /* 與容器一致的圓角 */
+    object-fit: cover;
+}
+
+.result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 300px;
+    text-align: left; /* 左對齊內容 */
+}
+
+.result label {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.result input {
     width: 100%;
-    height: 200px; /* 與影片高度對齊 */
-    resize: none; /* 禁止調整大小 */
     padding: 10px;
-    border: 5px solid #ddd;
+    border: 5px ridge #ddd;
     border-radius: 10px;
     font-size: 14px;
-    font-family: Arial, sans-serif;
-    line-height: 1.5;
+    text-align: center; /* 水平文字置中 */
+    vertical-align: middle; /* 垂直文字置中 */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 陰影效果 */
 }

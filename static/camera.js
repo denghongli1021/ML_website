@@ -1,50 +1,68 @@
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const resultTextarea = document.getElementById("expression-result");
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const resultInput = document.getElementById('result');
 
 // 啟用攝像頭
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
-    } catch (err) {
-        console.error("Error accessing camera: ", err);
-        resultTextarea.value = "Error accessing camera";
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+        resultInput.value = 'Camera access denied.';
     }
 }
 
-// 每秒捕獲一幀圖片，並進行表情偵測
-function startDetection() {
-    const context = canvas.getContext("2d");
-
-    setInterval(async () => {
-        // 設置畫布大小與視頻相匹配
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        // 將視頻的一幀畫到畫布上
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        // 獲取畫布的數據
-        const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg"));
-
-        // 發送到伺服器進行表情偵測
-        const formData = new FormData();
-        formData.append("file", imageBlob);
-
-        try {
-            const response = await fetch("/predict", { method: "POST", body: formData });
-            const data = await response.json();
-            if (response.ok) {
-                resultTextarea.value = data.result;
-            } else {
-                resultTextarea.value = "Error: " + data.error;
-            }
-        } catch (error) {
-            console.error("Error during detection:", error);
-            resultTextarea.value = "Error during detection";
-        }
-    }, 1000); // 每秒捕獲一次
+// 將視頻畫面捕捉到 Canvas
+function captureFrame() {
+    const context = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg'); // 轉換為 Base64 圖像
 }
 
-startCamera().then(() => startDetection());
+// 發送圖片到後端進行表情辨識
+async function predictExpression() {
+    const imageBase64 = captureFrame();
+    const formData = new FormData();
+    formData.append('file', dataURLtoBlob(imageBase64), 'frame.jpg');
+
+    try {
+        const response = await fetch('/predict', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (response.ok) {
+            resultInput.value = data.result; // 顯示表情辨識結果
+        } else {
+            resultInput.value = `Error: ${data.error}`;
+        }
+    } catch (error) {
+        console.error('Error predicting expression:', error);
+        resultInput.value = 'Error predicting expression.';
+    }
+}
+
+// Base64 轉換為 Blob
+function dataURLtoBlob(dataURL) {
+    const [header, base64] = dataURL.split(',');
+    const binary = atob(base64);
+    const array = [];
+    for (let i = 0; i < binary.length; i++) {
+        array.push(binary.charCodeAt(i));
+    }
+    return new Blob([new Uint8Array(array)], { type: 'image/jpeg' });
+}
+
+// 定期進行表情辨識
+function startPredictionLoop() {
+    setInterval(() => {
+        predictExpression();
+    }, 2000); // 每 2 秒捕捉一次畫面並發送
+}
+
+// 啟動攝像頭與表情辨識
+startCamera();
+startPredictionLoop();

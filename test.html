@@ -20,24 +20,20 @@
     <div id="rain-container"></div>
     <div id="random-images-container"></div>
 
-    <h1>Facial Expression Detection</h1>
-
-    <div class="video-container">
-        <!-- 顯示攝像頭畫面 -->
-        <video id="video" autoplay muted></video>
-        <!-- 結果顯示 -->
+    <div class="camera-container">
+        <div class="video-feed">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+        </div>
         <div class="result">
-            <label for="expression-result">Expression Result:</label>
-            <textarea id="expression-result" readonly>No detection yet</textarea>
+            <label for="result">Real-Time Expression</label>
+            <input type="text" id="result" readonly placeholder="Expression will appear here">
         </div>
     </div>
-    <!-- 隱藏的畫布用來提取圖片 -->
-    <canvas id="canvas" style="display: none;"></canvas>
     
-    <script src="/static/camera.js"></script>
     <script src="/static/function.js"></script>
     <script src="/static/sun.js"></script>
     <script src="/static/rain.js"></script>
-    <script src="/static/function.js"></script>
+    <script src="/static/camera.js"></script>
 </body>
 </html>
