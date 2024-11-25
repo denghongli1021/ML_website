@@ -6,7 +6,8 @@ const resultInput = document.getElementById('result');
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
+        video.srcObject = stream; // 將視頻流綁定到 video 元素
+        video.play(); // 確保 video 播放
     } catch (error) {
         console.error('Error accessing camera:', error);
         resultInput.value = 'Camera access denied.';
