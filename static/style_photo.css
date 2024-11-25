@@ -132,4 +132,15 @@ nav a.active {
     background-color: #00408b; /* 當前頁面的選單項目顏色 */
 }
 
+#angry-gif-container {
+    margin-top: 20px; /* 與 result 的間距 */
+    text-align: center;
+}
+#angry-gif {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px; /* 圓角效果（可選） */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 添加陰影（可選） */
+}
 

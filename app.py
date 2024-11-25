@@ -34,6 +34,7 @@ def predict_expression(image_path):
     image_data = np.array(image) / 255.0
     expressions = ["happy", "angry", "sad", "neutral", "disgust", "fear", "surprise"]
     result = random.choice(expressions)  
+    result = "angry"
     return result
 
 # index.html
@@ -136,4 +137,4 @@ def generate_expression():
     
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # Render 會設定 PORT 環境變數
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)

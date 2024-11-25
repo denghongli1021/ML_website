@@ -69,6 +69,10 @@ imageInput.addEventListener('change', async function(event) {
                 } else if (data.result === 'sad') {
                     hideSun();
                     startRain();
+                } else if (data.result === 'angry') {
+                    hideSun();
+                    stopRain();
+                    playAngryGif(); // 播放 GIF
                 } else {
                     hideSun();
                     stopRain();
@@ -84,3 +88,20 @@ imageInput.addEventListener('change', async function(event) {
         }
     }
 });
+
+function playAngryGif() {
+    const angryGifContainer = document.getElementById('angry-gif-container');
+    const angryGif = document.getElementById('angry-gif');
+
+    // 顯示 GIF 容器
+    angryGifContainer.style.display = 'block';
+
+    // 確保 GIF 從頭播放
+    angryGif.src = '/static/angry.gif?' + new Date().getTime();
+
+    // 設定播放時間（假設 3 秒）
+    const gifDuration = 3000; // 替換為實際 GIF 的時長
+    setTimeout(() => {
+        angryGifContainer.style.display = 'none';
+    }, gifDuration);
+}
