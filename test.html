@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facial Expression Detection</title>
+    <link rel="stylesheet" href="/static/style_test.css">
+    <link rel="stylesheet" href="/static/rain.css">
+    <link rel="stylesheet" href="/static/sun.css">
+</head>
+<body>
+    <nav>
+        <a href="/index.html">Photo</a>
+        <a href="/video.html">Video</a>
+        <a href="/generate.html">Generate</a>
+        <a href="/test.html" class="active">test</a>
+    </nav>
+    
+    <div id="sun-container"></div> 
+    <div id="rain-container"></div>
+    <div id="random-images-container"></div>
+
+    <h1>Facial Expression Detection</h1>
+
+    <div class="video-container">
+        <!-- 顯示攝像頭畫面 -->
+        <video id="video" autoplay muted></video>
+        <!-- 結果顯示 -->
+        <div class="result">
+            <label for="expression-result">Expression Result:</label>
+            <textarea id="expression-result" readonly>No detection yet</textarea>
+        </div>
+    </div>
+    <!-- 隱藏的畫布用來提取圖片 -->
+    <canvas id="canvas" style="display: none;"></canvas>
+    
+    <script src="/static/camera.js"></script>
+    <script src="/static/function.js"></script>
+    <script src="/static/sun.js"></script>
+    <script src="/static/rain.js"></script>
+    <script src="/static/function.js"></script>
+</body>
+</html>

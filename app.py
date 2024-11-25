@@ -35,7 +35,7 @@ def predict_expression(image_path):
     image_data = np.array(image) / 255.0
     expressions = ["happy", "angry", "sad", "neutral", "disgust", "fear", "surprise"]
     result = random.choice(expressions)  
-    # result = "angry"
+    # result = "sad"
     return result
 
 # index.html
@@ -43,15 +43,16 @@ def predict_expression(image_path):
 @app.route('/index.html')
 def index():
     return send_from_directory('.', 'index.html')
-
 # video.html
 @app.route('/video.html')
 def video():
     return send_from_directory('.', 'video.html')
-
 @app.route('/generate.html')
 def g():
     return send_from_directory('.', 'generate.html')
+@app.route('/test.html')
+def test():
+    return send_from_directory('.', 'test.html')
 
 # static folder
 @app.route('/static/<path:filename>')
