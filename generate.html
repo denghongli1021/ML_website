@@ -73,10 +73,26 @@
                 const expression = this.getAttribute('data-expression');
                 imageOutput.innerHTML = `<span>Generating ${expression} face...</span>`;
         
-                // Simulate a server request
-                setTimeout(() => {
-                    imageOutput.innerHTML = `<img src="https://via.placeholder.com/300?text=${expression}" alt="${expression} Face">`;
-                }, 1000);
+                // 向伺服器請求生成表情
+                fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ expression: expression })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        imageOutput.innerHTML = `<span>Error: ${data.error}</span>`;
+                    } else {
+                        imageOutput.innerHTML = `<img src="${data.image_url}" alt="${data.expression} Face">`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    imageOutput.innerHTML = `<span>Error generating face</span>`;
+                });
             });
         });
     </script>

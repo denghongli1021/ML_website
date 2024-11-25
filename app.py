@@ -1,3 +1,20 @@
+import subprocess
+import sys
+
+# 自動安裝所需的套件
+def install_package(package):
+    try:
+        __import__(package)
+    except ImportError:
+        print(f"{package} 未安裝，現在進行安裝...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# 安裝所需的套件
+install_package("flask")
+install_package("werkzeug")
+install_package("Pillow")
+install_package("numpy")
+
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 import os
