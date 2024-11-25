@@ -1,6 +1,6 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-const resultInput = document.getElementById('result');
+// const resultInput = document.getElementById('result');
 const startCameraButton = document.getElementById('start-camera');
 const stopCameraButton = document.getElementById('stop-camera');
 let stream;
