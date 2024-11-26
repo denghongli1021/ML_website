@@ -12,7 +12,6 @@ let captureInterval;
 startCameraButton.addEventListener('click', async () => {
     await startCamera(currentFacingMode);
 
-    // 開始每5秒執行一次預測
     captureInterval = setInterval(() => {
         captureAndPredict();
     }, 5000);
@@ -25,7 +24,6 @@ stopCameraButton.addEventListener('click', () => {
         video.srcObject = null;
         stream = null;
 
-        // 停止捕捉間隔
         clearInterval(captureInterval);
     }
 });
@@ -33,10 +31,8 @@ stopCameraButton.addEventListener('click', () => {
 // Function to flip the camera
 flipCameraButton.addEventListener('click', async () => {
     if (stream) {
-        // 停止當前的攝像頭流
         stream.getTracks().forEach(track => track.stop());
     }
-    // 切換攝像頭方向
     currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
     await startCamera(currentFacingMode);
 });
