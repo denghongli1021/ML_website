@@ -1,24 +1,14 @@
 const video = document.getElementById('video');
 const canvas = document.getElementById('canvas');
-// const resultInput = document.getElementById('result');
 const startCameraButton = document.getElementById('start-camera');
 const stopCameraButton = document.getElementById('stop-camera');
+const flipCameraButton = document.getElementById('flip-camera');
 let stream;
-let captureInterval;
+let currentFacingMode = 'user'; // 初始為前置攝像頭
 
 // Function to start the camera
 startCameraButton.addEventListener('click', async () => {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-
-        // Start capturing frames every 5 seconds
-        captureInterval = setInterval(() => {
-            captureAndPredict();
-        }, 5000);
-    } catch (error) {
-        console.error('Error accessing camera:', error);
-    }
+    await startCamera(currentFacingMode);
 });
 
 // Function to stop the camera
@@ -26,40 +16,29 @@ stopCameraButton.addEventListener('click', () => {
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         video.srcObject = null;
-        clearInterval(captureInterval);
+        stream = null;
     }
 });
 
-// Function to capture a frame and predict expression
-async function captureAndPredict() {
-    if (!stream) return;
+// Function to flip the camera
+flipCameraButton.addEventListener('click', async () => {
+    if (stream) {
+        // 停止當前的攝像頭流
+        stream.getTracks().forEach(track => track.stop());
+    }
+    // 切換攝像頭方向
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    await startCamera(currentFacingMode);
+});
 
-    // Draw the current video frame to the canvas
-    const context = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // Convert canvas to Blob
-    canvas.toBlob(async (blob) => {
-        const formData = new FormData();
-        formData.append('file', blob, 'frame.jpg');
-
-        try {
-            // Send the captured frame to the server for prediction
-            const response = await fetch('/predict', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                resultInput.value = data.result; // Update the result input
-            } else {
-                console.error('Prediction failed:', response.statusText);
-            }
-        } catch (error) {
-            console.error('Error during prediction:', error);
-        }
-    }, 'image/jpeg');
+// Function to start the camera with a specified facing mode
+async function startCamera(facingMode) {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode }
+        });
+        video.srcObject = stream;
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+    }
 }

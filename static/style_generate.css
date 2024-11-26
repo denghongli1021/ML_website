@@ -4,8 +4,9 @@ body {
     background-color: #000000;
     color: #ffffff;
     text-align: center;
-    padding: 20px;
-    margin: 0;
+    padding: 0px;
+    position: relative;
+    /* overflow: hidden; 防止內容溢出 */
 }
 
 h1 {
@@ -20,7 +21,7 @@ p {
 /* Navigation */
 nav {
     background-color: #007bff;
-    padding: 10px 20px;
+    padding: 0px 20px;
     display: flex;
     justify-content: center;
     align-items: center;

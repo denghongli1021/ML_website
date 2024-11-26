@@ -3,7 +3,7 @@ body {
     background-color: #000000;
     color: #ffffff;
     text-align: center;
-    padding: 20px;
+    padding: 0px;
     position: relative;
     overflow: hidden; /* 防止內容溢出 */
 }
@@ -38,7 +38,7 @@ input[type="file"] {
 
 nav {
     background-color: #007bff;
-    padding: 10px 20px;
+    padding: 0px 20px;
     display: flex;
     justify-content: center; /* 水平居中 */
     align-items: center;
@@ -163,11 +163,10 @@ button-container {
     margin: 50px;
 }
 
-/* CSS */
 .button-49,
 .button-49:after {
   width: 100px;
-  height: 50px;
+  height: 40px;
   line-height: 20px;
   font-size: 15px;
   font-family: 'Bebas Neue', sans-serif;
@@ -183,7 +182,7 @@ button-container {
   touch-action: manipulation;
 }
 
-.button-49:after {
+/* .button-49:after {
   --slice-0: inset(50% 50% 50% 50%);
   --slice-1: inset(80% -6px 0 0);
   --slice-2: inset(50% -6px 30% 0);
@@ -201,7 +200,77 @@ button-container {
   background: linear-gradient(45deg, transparent 3%, #00E6F6 3%, #00E6F6 5%, #FF013C 5%);
   text-shadow: -3px -3px 0px #F8F005, 3px 3px 0px #00E6F6;
   clip-path: var(--slice-0);
+} */
+#start-camera {
+    margin-right: 20px; 
 }
+
+#stop-camera {
+    margin-left: 20px; 
+}
+
+#flip-camera {
+    margin-left: 40px; 
+}
+#start-camera:after {
+    --slice-0: inset(50% 50% 50% 50%);
+    --slice-1: inset(80% -6px 0 0);
+    --slice-2: inset(50% -6px 30% 0);
+    --slice-3: inset(10% -6px 85% 0);
+    --slice-4: inset(40% -6px 43% 0);
+    --slice-5: inset(80% -6px 5% 0);
+    
+    content: 'OPEN CAMERA'; 
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 3%, #00E6F6 3%, #00E6F6 5%, #FF013C 5%);
+    text-shadow: -3px -3px 0px #F8F005, 3px 3px 0px #00E6F6;
+    clip-path: var(--slice-0);
+}
+  
+#stop-camera:after {
+    --slice-0: inset(50% 50% 50% 50%);
+    --slice-1: inset(80% -6px 0 0);
+    --slice-2: inset(50% -6px 30% 0);
+    --slice-3: inset(10% -6px 85% 0);
+    --slice-4: inset(40% -6px 43% 0);
+    --slice-5: inset(80% -6px 5% 0);
+
+    content: 'CLOSE CAMERA'; 
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 3%, #FF013C 3%, #FF013C 5%, #00E6F6 5%);
+    text-shadow: -3px -3px 0px #FF013C, 3px 3px 0px #00E6F6;
+    clip-path: var(--slice-0);
+}
+#flip-camera:after {
+    --slice-0: inset(50% 50% 50% 50%);
+    --slice-1: inset(80% -6px 0 0);
+    --slice-2: inset(50% -6px 30% 0);
+    --slice-3: inset(10% -6px 85% 0);
+    --slice-4: inset(40% -6px 43% 0);
+    --slice-5: inset(80% -6px 5% 0);
+    
+    content: 'FLIP CAMERA'; 
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 3%, #00E6F6 3%, #00E6F6 5%, #FF013C 5%);
+    text-shadow: -3px -3px 0px #F8F005, 3px 3px 0px #00E6F6;
+    clip-path: var(--slice-0);
+  }
+  
 
 .button-49:hover:after {
   animation: 1s glitch;
@@ -259,7 +328,7 @@ button-container {
   .button-49,
   .button-49:after {
     width: 200px;
-    height: 86px;
-    line-height: 88px;
+    height: 40px;
+    line-height: 30px;
   }
 }
