@@ -57,10 +57,10 @@ requests==2.32.3
 rich==13.9.4
 setuptools==75.3.0
 six==1.16.0
-tensorboard==2.17.0
+tensorboard==2.10.0
 tensorboard-data-server==0.7.2
-tensorflow==2.17.0
-tensorflow_intel==2.17.0
+tensorflow==2.10.0
+tensorflow_intel==2.10.0
 termcolor==2.5.0
 typing_extensions==4.12.2
 urllib3==2.2.3
