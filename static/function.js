@@ -1,6 +1,8 @@
 const imageInput = document.getElementById('image-input');
 const resultInput = document.getElementById('result');
+const imageDisplay = document.getElementById('image-display');
 const randomImagesContainer = document.getElementById('random-images-container');
+const processedImagesContainer = document.getElementById('processed-images-container');
 
 function displayRandomImages(images) {
     randomImagesContainer.innerHTML = ''; // 清空之前的圖片
@@ -48,6 +50,51 @@ function displayRandomImages(images) {
 
 imageInput.addEventListener('change', async function(event) {
     const file = event.target.files[0];
+    if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 显示图片预览
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            imageDisplay.innerHTML = `<img src="${e.target.result}" alt="Uploaded Image">`;
+        };
+        reader.readAsDataURL(file);
+
+        try {
+            // 发请求到 /analyze 路由
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                // 显示表情识别结果
+                resultInput.value = `Detected: ${result.label}`;
+
+                // 更新 processedImagesContainer，确保只显示 uploads/face_0.jpg
+                processedImagesContainer.innerHTML = ''; // 清空容器内容
+                if (result.processed_face) {
+                    const img = document.createElement('img');
+                    img.src = `/uploads/face_0.jpg?timestamp=${new Date().getTime()}`;
+                    img.alt = "Processed Face";
+                    img.style.width = "100px";
+                    img.style.height = "100px";
+                    img.style.margin = "10px";
+                    
+                    // 将 face_0.jpg 添加到容器中
+                    processedImagesContainer.appendChild(img);
+                }
+            } else {
+                resultInput.value = `Error: ${result.error}`;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            resultInput.value = 'Error occurred while analyzing the image.';
+        }
+    }
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
