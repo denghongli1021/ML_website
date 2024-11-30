@@ -5,7 +5,7 @@ def install_package(package):
     try:
         __import__(package)
     except ImportError:
-        print(f"{package} 未安裝，現在進行安裝...")
+        print(f"{package} not installed, proceeding with installation...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 install_package("flask")
 install_package("werkzeug")
@@ -100,7 +100,6 @@ def predict():
     file.save(file_path)
 
     try:
-        # 加載圖片
         image = cv2.imread(file_path, cv2.IMREAD_COLOR)
         if image is None:
             return jsonify({'error': f'Could not read image at {file_path}'}), 400
@@ -108,7 +107,6 @@ def predict():
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         input_tensor = transform_test(image).unsqueeze(0).to(device)
 
-        # 預測
         with torch.no_grad():
             outputs = model(input_tensor)
             _, predicted = torch.max(outputs.data, 1)
@@ -172,12 +170,12 @@ def generate_expression():
             return jsonify({'error': f'No images found for expression: {expression}'}), 404
 
         random_image = random.choice(os.listdir(folder_path))
-        image_url = f"/get_image/{expression}/{random_image}"  # 返回圖片的 URL
-
+        image_url = f"/get_image/{expression}/{random_image}"  
         return jsonify({'image_url': image_url, 'expression': expression})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Render 會設定 PORT 環境變數
+    port = int(os.environ.get('PORT', 5000))  
+    
     app.run(host='0.0.0.0', port=port, debug=True)
