@@ -1,16 +1,12 @@
 # https://devs.tw/post/448
 import subprocess
 import sys
-
-# 自動安裝所需的套件
 def install_package(package):
     try:
         __import__(package)
     except ImportError:
         print(f"{package} 未安裝，現在進行安裝...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-# 安裝所需的套件
 install_package("flask")
 install_package("werkzeug")
 install_package("Pillow")
@@ -23,6 +19,10 @@ import random
 from PIL import Image
 import numpy as np
 from mimetypes import guess_type 
+import torch
+import torch.nn as nn  
+from torchvision import models, transforms
+import cv2
 
 app = Flask(__name__, static_folder='static')
 
@@ -30,14 +30,41 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['IMAGE_FOLDER'] = 'expression_images'  
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  
 
-def predict_expression(image_path):
-    image = Image.open(image_path).convert("L").resize((48, 48))
-    image_data = np.array(image) / 255.0
-    expressions = ["happy", "angry", "sad", "neutral", "disgust", "fear", "surprise"]
-    result = random.choice(expressions)  
-    # result = "sad"
-    return result
+# sys.path.append(os.path.join(os.path.dirname(__file__), 'static', 'predict_photo'))
+from static.predict_photo.run_model1 import run_model1
+# print(run_model1())  
+emotions = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
+emotion_to_label = {idx: emotion for idx, emotion in enumerate(emotions)}
 
+# def predict_expression(image_path):
+#     image = Image.open(image_path).convert("L").resize((48, 48))
+#     image_data = np.array(image) / 255.0
+#     result = random.choice(emotions)  
+#     # result = "sad"
+#     return result
+
+def get_regnet(num_classes):
+    model = models.regnet_y_400mf(pretrained=True)
+    for name, param in model.named_parameters():
+        if "trunk_output.block1" in name or "trunk_output.block2" in name:
+            param.requires_grad = False
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, num_classes)
+    return model
+num_classes = len(emotions)
+model = get_regnet(num_classes=num_classes)
+model_path = os.path.join(os.path.dirname(__file__), 'static/predict_photo/best_model_fold7.pth')
+model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+model.eval()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+transform_test = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
 # index.html
 @app.route('/')
 @app.route('/index.html')
@@ -73,22 +100,36 @@ def predict():
     file.save(file_path)
 
     try:
-        result = predict_expression(file_path)
-        
-        folder_path = os.path.join(app.config['IMAGE_FOLDER'], result)
-        if not os.path.exists(folder_path) or not os.listdir(folder_path):
-            return jsonify({'error': f'No images found for expression: {result}'}), 404
+        # 加載圖片
+        image = cv2.imread(file_path, cv2.IMREAD_COLOR)
+        if image is None:
+            return jsonify({'error': f'Could not read image at {file_path}'}), 400
 
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        input_tensor = transform_test(image).unsqueeze(0).to(device)
+
+        # 預測
+        with torch.no_grad():
+            outputs = model(input_tensor)
+            _, predicted = torch.max(outputs.data, 1)
+        
+        predicted_emotion = emotion_to_label[predicted.item()]
+        
+        folder_path = os.path.join(app.config['IMAGE_FOLDER'], predicted_emotion)
+        if not os.path.exists(folder_path) or not os.listdir(folder_path):
+            return jsonify({'error': f'No images found for expression: {predicted_emotion}'}), 404
         image_list = [
-            f"/get_image/{result}/{filename}" for filename in os.listdir(folder_path)
+            f"/get_image/{predicted_emotion}/{filename}" for filename in os.listdir(folder_path)
         ]
 
         return jsonify({
-            'result': result,
+            'result': predicted_emotion,
             'images': image_list
         })
+        # return jsonify({'result': predicted_emotion})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
 @app.route('/get_image/<expression>/<filename>', methods=['GET'])
 def get_image(expression, filename):
     folder_path = os.path.join(app.config['IMAGE_FOLDER'], expression)

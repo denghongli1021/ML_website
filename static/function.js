@@ -14,9 +14,7 @@ function displayRandomImages(images) {
         let topPosition, leftPosition;
         let isValidPosition = false;
 
-        // 嘗試生成符合條件的隨機位置
         while (!isValidPosition) {
-            // 隨機生成位置，遠離中心
             do {
                 topPosition = Math.random() * 100;
                 leftPosition = Math.random() * 100;
