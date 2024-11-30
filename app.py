@@ -38,12 +38,12 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 emotions = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
 emotion_to_label = {idx: emotion for idx, emotion in enumerate(emotions)}
 
-# def predict_expression(image_path):
-#     image = Image.open(image_path).convert("L").resize((48, 48))
-#     image_data = np.array(image) / 255.0
-#     result = random.choice(emotions)  
-#     # result = "sad"
-#     return result
+def predict_expression(image_path):
+    image = Image.open(image_path).convert("L").resize((48, 48))
+    image_data = np.array(image) / 255.0
+    result = random.choice(emotions)  
+    # result = "sad"
+    return result
 
 def get_regnet(num_classes):
     model = models.regnet_y_400mf(pretrained=True)
@@ -104,6 +104,7 @@ def predict():
     file.save(file_path)
 
     try:
+        # Load image and preprocess
         image = cv2.imread(file_path, cv2.IMREAD_COLOR)
         if image is None:
             return jsonify({'error': f'Could not read image at {file_path}'}), 400
@@ -111,26 +112,18 @@ def predict():
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         input_tensor = transform_test(image).unsqueeze(0).to(device)
 
+        # Model Prediction
         with torch.no_grad():
             outputs = model(input_tensor)
             _, predicted = torch.max(outputs.data, 1)
         
         predicted_emotion = emotion_to_label[predicted.item()]
-        
-        folder_path = os.path.join(app.config['IMAGE_FOLDER'], predicted_emotion)
-        if not os.path.exists(folder_path) or not os.listdir(folder_path):
-            return jsonify({'error': f'No images found for expression: {predicted_emotion}'}), 404
-        image_list = [
-            f"/get_image/{predicted_emotion}/{filename}" for filename in os.listdir(folder_path)
-        ]
 
-        return jsonify({
-            'result': predicted_emotion,
-            'images': image_list
-        })
-        # return jsonify({'result': predicted_emotion})
+        # Return Result
+        return jsonify({'result': predicted_emotion})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error during prediction: {e}")
+        return jsonify({'error': str(e)}), 500  
     
 @app.route('/get_image/<expression>/<filename>', methods=['GET'])
 def get_image(expression, filename):
