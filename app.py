@@ -28,6 +28,8 @@ app = Flask(__name__, static_folder='static')
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['IMAGE_FOLDER'] = 'expression_images'  
+app.config['MODEL_FOLDER'] = os.path.join('static', 'predict_photo')
+app.config['MODEL_FILE'] = 'best_model_fold7.pth'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'static', 'predict_photo'))
@@ -51,11 +53,11 @@ def get_regnet(num_classes):
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, num_classes)
     return model
-num_classes = len(emotions)
-model = get_regnet(num_classes=num_classes)
-model_path = os.path.join(os.path.dirname(__file__), 'static/predict_photo/best_model_fold7.pth')
+model_path = os.path.join(app.config['MODEL_FOLDER'], app.config['MODEL_FILE'])
 if not os.path.exists(model_path):
     raise FileNotFoundError(f"Model file not found at {model_path}")
+num_classes = len(emotions)
+model = get_regnet(num_classes=num_classes)
 model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
 model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
