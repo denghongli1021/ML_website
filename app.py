@@ -31,7 +31,7 @@ app.config['IMAGE_FOLDER'] = 'expression_images'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'static', 'predict_photo'))
-from static.predict_photo.run_model1 import run_model1
+# from static.predict_photo.run_model1 import run_model1
 # print(run_model1())  
 emotions = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
 emotion_to_label = {idx: emotion for idx, emotion in enumerate(emotions)}
@@ -54,6 +54,8 @@ def get_regnet(num_classes):
 num_classes = len(emotions)
 model = get_regnet(num_classes=num_classes)
 model_path = os.path.join(os.path.dirname(__file__), 'static/predict_photo/best_model_fold7.pth')
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Model file not found at {model_path}")
 model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
 model.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
