@@ -28,8 +28,8 @@ app = Flask(__name__, static_folder='static')
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['IMAGE_FOLDER'] = 'expression_images'  
-app.config['MODEL_FOLDER'] = os.path.join('static', 'predict_photo')
-app.config['MODEL_FILE'] = 'best_model_fold7.pth'
+app.config['MODEL_FOLDER'] = app.static_folder  # 靜態文件夾 (static)
+app.config['MODEL_FILE'] = 'best_model_fold7.pth'  # 模型文件名稱
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'static', 'predict_photo'))
