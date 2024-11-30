@@ -104,7 +104,6 @@ def predict():
     file.save(file_path)
 
     try:
-        # Load image and preprocess
         image = cv2.imread(file_path, cv2.IMREAD_COLOR)
         if image is None:
             return jsonify({'error': f'Could not read image at {file_path}'}), 400
@@ -112,18 +111,26 @@ def predict():
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         input_tensor = transform_test(image).unsqueeze(0).to(device)
 
-        # Model Prediction
         with torch.no_grad():
             outputs = model(input_tensor)
             _, predicted = torch.max(outputs.data, 1)
         
         predicted_emotion = emotion_to_label[predicted.item()]
+        
+        folder_path = os.path.join(app.config['IMAGE_FOLDER'], predicted_emotion)
+        if not os.path.exists(folder_path) or not os.listdir(folder_path):
+            return jsonify({'error': f'No images found for expression: {predicted_emotion}'}), 404
+        image_list = [
+            f"/get_image/{predicted_emotion}/{filename}" for filename in os.listdir(folder_path)
+        ]
 
-        # Return Result
-        return jsonify({'result': predicted_emotion})
+        return jsonify({
+            'result': predicted_emotion,
+            'images': image_list
+        })
+        # return jsonify({'result': predicted_emotion})
     except Exception as e:
-        print(f"Error during prediction: {e}")
-        return jsonify({'error': str(e)}), 500  
+        return jsonify({'error': str(e)}), 500
     
 @app.route('/get_image/<expression>/<filename>', methods=['GET'])
 def get_image(expression, filename):
