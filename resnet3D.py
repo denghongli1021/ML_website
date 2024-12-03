@@ -3,24 +3,25 @@ import cv2
 import os
 import numpy as np
 import random
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 import torch
 import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.model_selection import train_test_split
 from torchvision.models.video import r3d_18
-from torch.utils.data import Dataset, DataLoader
-from tqdm import tqdm
+from torch.utils.data import Dataset
 import mediapipe as mp
+import dlib
 
+
+
+# 修改: dictionary的Surprised => Surprise
 facial_expression = {
     'Angry' :     0,
     'Happy' :     1,
     'Neutral' :   2,
     'Sad' :       3,
-    'Surprised' : 4,
+    'Surprise' :  4,
     'Fear' :      5,
     'Disgust' :   6
 }
@@ -96,44 +97,67 @@ def video_to_frames(video_path, output_dir, fps=5):
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1)
 
-def process_image(input_path, max_frames=16, resize=(112, 112)):
-    """
-    Processing videos or images, converting them into fixed-size frame sequences, and returning a normalized numpy array.
-    Args:
-        input_path
-        max_frames
-        resize: resize to (width, height)
-    Returns:
-        numpy array, shape (seq_len, height, width, channels)
-    """
-    def detect_face_and_landmarks(frame):
-        """Detects faces and overlays facial landmarks."""
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = face_mesh.process(rgb_frame)
-        if results.multi_face_landmarks:
-            for face_landmarks in results.multi_face_landmarks:
-                for landmark in face_landmarks.landmark:
-                    x = int(landmark.x * frame.shape[1])
-                    y = int(landmark.y * frame.shape[0])
-                    cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)  # Draw facial landmarks
-        return frame
 
+# 新增:detect_face_and_landmarks這個function
+mp_face_detection = mp.solutions.face_detection
+mp_face_mesh = mp.solutions.face_mesh
+face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1)
+
+def detect_face_and_landmarks(frame):
+    """Detect faces, zoom into the face, and overlay facial landmarks."""
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    
+    # Detect faces using MediaPipe Face Detection
+    face_detection_results = face_detection.process(rgb_frame)
+    if face_detection_results.detections:
+        for detection in face_detection_results.detections:
+            bboxC = detection.location_data.relative_bounding_box
+            h, w, _ = frame.shape
+            x_min = int(bboxC.xmin * w)
+            y_min = int(bboxC.ymin * h)
+            x_max = int((bboxC.xmin + bboxC.width) * w)
+            y_max = int((bboxC.ymin + bboxC.height) * h)
+
+            # Expand the bounding box by 20%
+            x_min = max(0, x_min - int(0.1 * (x_max - x_min)))
+            y_min = max(0, y_min - int(0.1 * (y_max - y_min)))
+            x_max = min(w, x_max + int(0.1 * (x_max - x_min)))
+            y_max = min(h, y_max + int(0.1 * (y_max - y_min)))
+
+            # Crop and zoom in on the face
+            face_roi = frame[y_min:y_max, x_min:x_max]
+            frame = cv2.resize(face_roi, (frame.shape[1], frame.shape[0]))
+
+    # Detect facial landmarks
+    results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    if results.multi_face_landmarks:
+        for face_landmarks in results.multi_face_landmarks:
+            for landmark in face_landmarks.landmark:
+                x = int(landmark.x * frame.shape[1])
+                y = int(landmark.y * frame.shape[0])
+                cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)  # Draw facial landmarks
+    return frame
+
+# 修改: process_image function
+def process_image(input_path, max_frames=10, resize=(112, 112)):
+   
     frames = []
 
+    def read_and_process_frame(frame):
+        frame = cv2.resize(frame, resize)
+        frame = detect_face_and_landmarks(frame)  
+        return frame.astype(np.float32) / 255.0
+
     if isinstance(input_path, list):
-        for path in input_path:
+        for path in input_path:  
             if isinstance(path, str) and os.path.isfile(path):
-                # print(f"Reading file: {path}")
+                # print(f"Reading file: {path}") 
                 if path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
                     frame = cv2.imread(path)
                     if frame is not None:
-                        # 確保影像是 RGB 格式
-                        if len(frame.shape) < 3 or frame.shape[2] == 1:
-                            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                        frame = cv2.resize(frame, resize)
-                        frame = detect_face_and_landmarks(frame)
-                        frame = frame.astype(np.float32) / 255.0
-                        frames = [frame] * max_frames
+                        processed_frame = read_and_process_frame(frame)
+                        frames = [processed_frame] * max_frames
                     else:
                         print(f"Warning: Failed to read {path}")
                 else:
@@ -146,10 +170,8 @@ def process_image(input_path, max_frames=16, resize=(112, 112)):
         if input_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
             frame = cv2.imread(input_path)
             if frame is not None:
-                frame = cv2.resize(frame, resize)
-                frame = detect_face_and_landmarks(frame)
-                frame = frame.astype(np.float32) / 255.0
-                frames = [frame] * max_frames
+                processed_frame = read_and_process_frame(frame)
+            frames = [processed_frame] * max_frames 
         else:
             print(f"Warning: Unsupported video format for {input_path}")
 
@@ -190,7 +212,7 @@ class ResNet3DModel(nn.Module):
         return self.backbone(x)
 
 class VideoImageDataset(Dataset):
-    def __init__(self, video_paths, labels=None, transform=None, clip_length=16, resize=(112, 112)):
+    def __init__(self, video_paths, labels=None, transform=None, clip_length=10, resize=(112, 112)):
         self.video_paths = video_paths
         self.labels = labels
         self.transform = transform

@@ -14,6 +14,10 @@ from torchvision import models, transforms
 import cv2
 import shutil
 from pathlib import Path
+import torch.nn.functional as F
+from torchvision.models.video import r3d_18
+import mediapipe as mp
+import dlib 
 
 # Import the "generate happy" logic
 from generate_happy import generate_emotion
@@ -26,7 +30,7 @@ facial_expression = {
     'Happy' :     1,
     'Neutral' :   2,
     'Sad' :       3,
-    'Surprised' : 4,
+    'Surprise' : 4,
     'Fear' :      5,
     'Disgust' :   6
 }
@@ -178,6 +182,12 @@ def predict_video():
     video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_filename)
     file.save(video_path)
 
+    # 初始化人脸检测模块
+    mp_face_detection = mp.solutions.face_detection
+    mp_face_mesh = mp.solutions.face_mesh
+    face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+    face_mesh = mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1)
+
     # Extract frames from the video
     test_dir = app.config['EXTRACTED_FRAMES_FOLDER']
     clear_folder(test_dir)
@@ -217,12 +227,25 @@ def predict_video():
     facial_expression_reverse = {v: k for k, v in facial_expression.items()}
     predicted_expression = facial_expression_reverse.get(predicted_label, "Unknown")
 
+    # 找到背景圖片和 GIF
+    folder_path = os.path.join(app.config['IMAGE_FOLDER'], predicted_expression)
+    if not os.path.exists(folder_path) or not os.listdir(folder_path):
+        return jsonify({'error': f'No background image found for expression: {predicted_expression}'})
+
+    # Collect all image URLs
+    image_list = [
+        f"/get_image/{predicted_expression}/{filename}" for filename in os.listdir(folder_path)
+    ]
+
     # Debug: 打印预测结果
     print(f"Predicted label: {predicted_label}")
 
 
-    # Return the predicted expression
-    return jsonify({'expression': predicted_expression})
+    # 返回包含背景圖片/GIF 的回應
+    return jsonify({
+        'expression': predicted_expression,
+        'images': image_list
+    })
     
 @app.route('/generated/<path:filename>')
 def serve_generated_images(filename):
@@ -254,6 +277,7 @@ def generate_expression():
     processed_folder = app.config['PROCESSED_FOLDER']
     generated_folder = app.config['GENERATED_FOLDER']
     os.makedirs(processed_folder, exist_ok=True)
+    os.makedirs(generated_folder, exist_ok=True)
 
     try:
         # Step 1: Process the image (crop and adjust using dataProcess)
@@ -262,12 +286,13 @@ def generate_expression():
             raise FileNotFoundError("Processed folder is empty. Check the processor function.")
         # Step 2: Generate the expression-modified image
         processed_image = os.path.join(processed_folder, os.listdir(processed_folder)[0])
-        output_image_path = os.path.join(generated_folder, f"generated_{expression}.png")
+        #output_image_path = os.path.join(generated_folder, f"generated_{expression}.png")
         #generate_happy_expression(processed_image, output_image_path)
         # 使用新的 generate_emotion 函數
         generate_emotion(expression)
         output_dir = 'test_generated_images'
         generated_image_path = os.path.join(output_dir, f'generated_processed_face.jpg')  # 假設處理後保存的名稱固定
+        
         if os.path.exists(generated_image_path):
             # Return the URL of the generated image
             return jsonify({'image_url': f"/generated/generated_{expression}_processed_face.jpg"})

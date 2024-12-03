@@ -46,3 +46,4 @@ def generate_emotion(emotion):
             img_pil.save(output_path)
 
     print(f"Generated images saved to {generated_dir}")
+    
