@@ -19,7 +19,17 @@ from pathlib import Path
 from generate_happy import generate_emotion
 import dataProcess
 
+from resnet3D import ResNet3DModel, process_image, video_to_frames, augment_frames
 
+facial_expression = {
+    'Angry' :     0,
+    'Happy' :     1,
+    'Neutral' :   2,
+    'Sad' :       3,
+    'Surprised' : 4,
+    'Fear' :      5,
+    'Disgust' :   6
+}
 
 app = Flask(__name__, static_folder='static')
 
@@ -29,11 +39,13 @@ app.config['GENERATED_FOLDER'] = 'generated'
 app.config['IMAGE_FOLDER'] = 'expression_images'  
 app.config['MODEL_FOLDER'] = app.static_folder  # 靜態文件夾 (static)
 app.config['MODEL_FILE'] = 'best_model_fold7.pth'  # 模型文件名稱
+app.config['EXTRACTED_FRAMES_FOLDER'] = './extracted_frames'
 
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  
 os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+os.makedirs(app.config['EXTRACTED_FRAMES_FOLDER'], exist_ok=True)
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'static', 'predict_photo'))
 # from static.predict_photo.run_model1 import run_model1
@@ -153,21 +165,64 @@ def get_image(expression, filename):
 # video predict
 @app.route('/predict_video', methods=['POST'])
 def predict_video():
+    # Check if a file is uploaded
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
-    filename = secure_filename(file.filename)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(file_path)
+    # Save the uploaded video
+    video_filename = secure_filename(file.filename)
+    video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_filename)
+    file.save(video_path)
 
-    try:
-        results = ["happy", "sad", "angry"] 
-        return jsonify({'results': results})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    # Extract frames from the video
+    test_dir = app.config['EXTRACTED_FRAMES_FOLDER']
+    clear_folder(test_dir)
+    video_to_frames(video_path, test_dir)
+
+    # Load frames for prediction
+    frame_paths = [
+        os.path.join(test_dir, f) for f in sorted(os.listdir(test_dir)) if f.endswith('.png')
+    ]
+
+    if not frame_paths:
+        return jsonify({'error': 'No frames extracted from the video'}), 500
+
+
+    # Process frames for model input
+    frames = process_image(frame_paths, max_frames=16, resize=(112, 112))
+    if len(frames) == 0:
+        return jsonify({'error': 'Failed to process frames'}), 500
+
+    frames = augment_frames(frames)
+    #processed_frames = torch.tensor(frames, dtype=torch.float32).unsqueeze(0)
+    # 修正形狀順序
+    processed_frames = torch.tensor(np.transpose(frames, (1, 0, 2, 3))).unsqueeze(0)
+
+    # Load the trained model
+    model_path = os.path.join('./saved_models', 'test_model.pth')
+    model = ResNet3DModel(num_classes=7).to(torch.device('cpu'))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
+    model.eval()
+
+    # Predict the expression
+    with torch.no_grad():
+        output = model(processed_frames)
+        predicted_label = output.argmax(dim=1).item()
+
+    # Map the predicted label to the expression
+    facial_expression_reverse = {v: k for k, v in facial_expression.items()}
+    predicted_expression = facial_expression_reverse.get(predicted_label, "Unknown")
+
+    # Debug: 打印预测结果
+    print(f"Predicted label: {predicted_label}")
+
+
+    # Return the predicted expression
+    return jsonify({'expression': predicted_expression})
     
 @app.route('/generated/<path:filename>')
 def serve_generated_images(filename):
