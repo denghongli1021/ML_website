@@ -1,17 +1,6 @@
 # https://devs.tw/post/448
 import subprocess
 import sys
-def install_package(package):
-    try:
-        __import__(package)
-    except ImportError:
-        print(f"{package} not installed, proceeding with installation...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-install_package("flask")
-install_package("werkzeug")
-install_package("Pillow")
-install_package("numpy")
-
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 import os
@@ -23,14 +12,28 @@ import torch
 import torch.nn as nn  
 from torchvision import models, transforms
 import cv2
+import shutil
+from pathlib import Path
+
+# Import the "generate happy" logic
+from generate_happy import generate_emotion
+import dataProcess
+
+
 
 app = Flask(__name__, static_folder='static')
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['PROCESSED_FOLDER'] = 'processed'
+app.config['GENERATED_FOLDER'] = 'generated'
 app.config['IMAGE_FOLDER'] = 'expression_images'  
 app.config['MODEL_FOLDER'] = app.static_folder  # 靜態文件夾 (static)
 app.config['MODEL_FILE'] = 'best_model_fold7.pth'  # 模型文件名稱
+
+
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  
+os.makedirs(app.config['GENERATED_FOLDER'], exist_ok=True)
+os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
 
 # sys.path.append(os.path.join(os.path.dirname(__file__), 'static', 'predict_photo'))
 # from static.predict_photo.run_model1 import run_model1
@@ -99,9 +102,15 @@ def predict():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
+    # 使用 pathlib 清理上传文件夹
+    upload_folder = Path(app.config['UPLOAD_FOLDER'])
+    clear_folder(upload_folder)  # 清理旧文件
+
     filename = secure_filename(file.filename)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(file_path)
+    # 記錄當前上傳的圖片名稱
+    
 
     try:
         image = cv2.imread(file_path, cv2.IMREAD_COLOR)
@@ -159,27 +168,73 @@ def predict_video():
         return jsonify({'results': results})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/generated/<path:filename>')
+def serve_generated_images(filename):
+    return send_from_directory(app.config['GENERATED_FOLDER'], filename)
+
 
 @app.route('/generate', methods=['POST'])
 def generate_expression():
+    data = request.json
+
+    if 'expression' not in data:
+        return jsonify({'error': 'No expression provided'}), 400
+    
+
+
+    expression = data['expression']
+
+
+
+    # Check if an image has been uploaded
+    uploaded_files = os.listdir(app.config['UPLOAD_FOLDER'])
+    if not uploaded_files:
+        return jsonify({'error': 'No image uploaded yet'}), 400
+ 
+    # 獲取當前圖片路徑
+    
+    input_image = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_files[0])
+
+    processed_folder = app.config['PROCESSED_FOLDER']
+    generated_folder = app.config['GENERATED_FOLDER']
+    os.makedirs(processed_folder, exist_ok=True)
+
     try:
-        data = request.json  
-        if 'expression' not in data:
-            return jsonify({'error': 'No expression provided'}), 400
+        # Step 1: Process the image (crop and adjust using dataProcess)
+        dataProcess.processor(input_dir=app.config['UPLOAD_FOLDER'], output_face_dir=processed_folder)
+        if not os.listdir(processed_folder):
+            raise FileNotFoundError("Processed folder is empty. Check the processor function.")
+        # Step 2: Generate the expression-modified image
+        processed_image = os.path.join(processed_folder, os.listdir(processed_folder)[0])
+        output_image_path = os.path.join(generated_folder, f"generated_{expression}.png")
+        #generate_happy_expression(processed_image, output_image_path)
+        # 使用新的 generate_emotion 函數
+        generate_emotion(expression)
+        output_dir = 'test_generated_images'
+        generated_image_path = os.path.join(output_dir, f'generated_processed_face.jpg')  # 假設處理後保存的名稱固定
+        if os.path.exists(generated_image_path):
+            # Return the URL of the generated image
+            return jsonify({'image_url': f"/generated/generated_{expression}_processed_face.jpg"})
+        else:
+            return jsonify({'error': 'Generated image not found'}), 404
 
-        expression = data['expression']
-        folder_path = os.path.join(app.config['IMAGE_FOLDER'], expression)
-
-        if not os.path.exists(folder_path) or not os.listdir(folder_path):
-            return jsonify({'error': f'No images found for expression: {expression}'}), 404
-
-        random_image = random.choice(os.listdir(folder_path))
-        image_url = f"/get_image/{expression}/{random_image}"  
-        return jsonify({'image_url': image_url, 'expression': expression})
+    
     except Exception as e:
+        print(f"Error during processing: {e}")
         return jsonify({'error': str(e)}), 500
     
+# 清空文件夹
+def clear_folder(folder_path):
+    folder = Path(folder_path)
+    if folder.exists():
+        for file in folder.iterdir():
+            if file.is_file():
+                file.unlink()
+    
+
+    
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  
+    port = int(os.environ.get('PORT', 5001))  
     
     app.run(host='0.0.0.0', port=port, debug=True)

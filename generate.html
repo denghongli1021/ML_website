@@ -57,21 +57,42 @@
         const imageDisplay = document.getElementById('image-display');
         const imageOutput = document.getElementById('image-output');
         const expressionButtons = document.querySelectorAll('.expression-button');
+        
+        let uploadedFile = null;
 
-        // Handle image upload
         imageInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const imageURL = URL.createObjectURL(file);
-                imageDisplay.innerHTML = `<img src="${imageURL}" alt="Uploaded Image">`;
-                imageOutput.innerHTML = `<span>No expression generated yet</span>`; // Clear the output
-            }
-        });
+        const file = event.target.files[0];
+        if (file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Show uploaded image on the left
+            const imageURL = URL.createObjectURL(file);
+            imageDisplay.innerHTML = `<img src="${imageURL}" alt="Uploaded Image">`;
+            imageOutput.innerHTML = `<span>No expression generated yet</span>`; // Clear the output
+
+            // Upload image to the server
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error uploading image:', data.error);
+                } else {
+                    uploadedFile = data.filename; // Store the uploaded file name
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    });
 
         // Handle expression generation
         expressionButtons.forEach(button => {
             button.addEventListener('click', function() {
                 const expression = this.getAttribute('data-expression');
+                imageOutput.innerHTML = `<img src="/generated/generated_${expression}.png" alt="${expression} Face">`;
                 imageOutput.innerHTML = `<span>Generating ${expression} face...</span>`;
         
                 // 向伺服器請求生成表情
@@ -87,7 +108,12 @@
                     if (data.error) {
                         imageOutput.innerHTML = `<span>Error: ${data.error}</span>`;
                     } else {
-                        imageOutput.innerHTML = `<img src="${data.image_url}" alt="${data.expression} Face">`;
+                        //const imageURL = data.image_url;
+                        //imageOutput.innerHTML = `<img src="/generated/generated_${expression}_processed_face.jpg" alt="${expression} Face">`;
+                        //imageOutput.innerHTML = `<img src="${imageURL}" alt="${expression} Face">`;
+                        // 將生成的圖片顯示在右側區域
+                        const imageURL = `/generated/generated_${expression}_processed_face.jpg`;
+                        imageOutput.innerHTML = `<img src="${imageURL}" alt="${expression} Face">`;
                     }
                 })
                 .catch(error => {
