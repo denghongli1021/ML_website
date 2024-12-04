@@ -18,6 +18,7 @@ import torch.nn.functional as F
 from torchvision.models.video import r3d_18
 import mediapipe as mp
 import dlib 
+import myGAN 
 
 # Import the "generate happy" logic
 from generate_happy import generate_emotion
@@ -254,52 +255,61 @@ def serve_generated_images(filename):
 
 @app.route('/generate', methods=['POST'])
 def generate_expression():
+    # Ensure the request contains the desired expression
     data = request.json
-
     if 'expression' not in data:
         return jsonify({'error': 'No expression provided'}), 400
-    
-
-
     expression = data['expression']
 
-
-
-    # Check if an image has been uploaded
+    # Ensure an image has been uploaded
     uploaded_files = os.listdir(app.config['UPLOAD_FOLDER'])
     if not uploaded_files:
         return jsonify({'error': 'No image uploaded yet'}), 400
- 
-    # 獲取當前圖片路徑
-    
+
+    # Get the first uploaded image
     input_image = os.path.join(app.config['UPLOAD_FOLDER'], uploaded_files[0])
 
+    # Paths for processed and generated images
     processed_folder = app.config['PROCESSED_FOLDER']
     generated_folder = app.config['GENERATED_FOLDER']
     os.makedirs(processed_folder, exist_ok=True)
     os.makedirs(generated_folder, exist_ok=True)
 
     try:
-        # Step 1: Process the image (crop and adjust using dataProcess)
+        # Step 1: Process the input image
         dataProcess.processor(input_dir=app.config['UPLOAD_FOLDER'], output_face_dir=processed_folder)
         if not os.listdir(processed_folder):
             raise FileNotFoundError("Processed folder is empty. Check the processor function.")
-        # Step 2: Generate the expression-modified image
+
         processed_image = os.path.join(processed_folder, os.listdir(processed_folder)[0])
-        #output_image_path = os.path.join(generated_folder, f"generated_{expression}.png")
-        #generate_happy_expression(processed_image, output_image_path)
-        # 使用新的 generate_emotion 函數
-        generate_emotion(expression)
-        output_dir = 'test_generated_images'
-        generated_image_path = os.path.join(output_dir, f'generated_processed_face.jpg')  # 假設處理後保存的名稱固定
-        
+
+        # Step 2: Initialize and load the GAN model for the specific expression
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        generator = myGAN.Generator().to(device)
+        generator.load_state_dict(torch.load(f'saved_models/generator_{expression}.pth', map_location=device))
+        generator.eval()
+
+        # Step 3: Generate the expression-modified image
+        test_loader = dataProcess.getTestLoader(input_test_dir=processed_folder)
+        generated_image_path = os.path.join(generated_folder, f'generated_face.jpg')
+
+        with torch.no_grad():
+            for test_image, image_path in test_loader:
+                test_image = test_image.to(device)
+                generated_image = generator(test_image).cpu()
+
+                # Convert the tensor to a PIL image and save
+                generated_image = generated_image[0].permute(1, 2, 0) * 0.5 + 0.5
+                generated_image = (generated_image.numpy() * 255).astype('uint8')
+                img_pil = Image.fromarray(generated_image)
+                img_pil.save(generated_image_path)
+
+        # Step 4: Return the generated image URL
         if os.path.exists(generated_image_path):
-            # Return the URL of the generated image
-            return jsonify({'image_url': f"/generated/generated_{expression}_processed_face.jpg"})
+            return jsonify({'image_url': f"/generated/generated_face.jpg"})
         else:
             return jsonify({'error': 'Generated image not found'}), 404
 
-    
     except Exception as e:
         print(f"Error during processing: {e}")
         return jsonify({'error': str(e)}), 500

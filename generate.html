@@ -110,12 +110,8 @@
                     if (data.error) {
                         imageOutput.innerHTML = `<span>Error: ${data.error}</span>`;
                     } else {
-                        //const imageURL = data.image_url;
-                        //imageOutput.innerHTML = `<img src="/generated/generated_${expression}_processed_face.jpg" alt="${expression} Face">`;
-                        //imageOutput.innerHTML = `<img src="${imageURL}" alt="${expression} Face">`;
-                        // 將生成的圖片顯示在右側區域
-                        //const imageURL = `/generated/generated_${expression}_processed_face.jpg`;
-                        const imageURL = data.image_url; // 從後端獲取生成的文件路徑
+                        // Add a unique timestamp to the URL to bypass browser caching
+                        const imageURL = `${data.image_url}?timestamp=${new Date().getTime()}`;
                         imageOutput.innerHTML = `<img src="${imageURL}" alt="${expression} Face">`;
                     }
                 })
